@@ -1,8 +1,6 @@
 # MCD-variogram-estimator
 R-Code for the simulation study and the application of  the paper "Nonparametric directional variogram estimation in the presene of outlier blocks".
 
-Test
-
 - Functions: an ordner containing the following documents
       - Auxiliary-functions.R: auxiliary functions needed for the variogram estimations, e.g. to build the vectors for the 
                                MCD variogram estimators
