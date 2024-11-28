@@ -32,7 +32,20 @@ library(patchwork)
 ####################################
 
 ## Load the satellite data
-IMAGE_DIR = "L8_cropped"  # Path of the data
+## Data can be downloaded from https://earthexplorer.usgs.gov/
+## the used data here have the following dimensions in space and time:
+# A data cube view object
+# 
+# Dimensions:
+#   low              high count pixel_size
+# t        2013-04-12        2019-11-30  2424        P1D
+# y -1096876.57818711 -993876.578187112   206        500
+# x -7370181.54841633 -7235181.54841633   270        500
+# 
+# SRS: "EPSG:3857"
+# Temporal aggregation method: "first"
+# Spatial resampling method: "near"
+#IMAGE_DIR = "L8_cropped"  # Path of the data 
 
 # load the structure of the data
 col <- create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
