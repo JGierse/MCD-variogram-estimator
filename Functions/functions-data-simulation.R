@@ -7,7 +7,7 @@
 ##                                            the gridsize in y-direction (ny); default: nx = ny = 15
 ##        dist.outlier:    function         - function to draw random numbers from the distribution of the 
 ##                                            outliers; default: rnorm
-##        variogram:       RMmodelgenerator - variogram model, notation of package RandomFields; 
+##        variogram:       RMmodelgenerator - semivariogram model, notation of package RandomFields; 
 ##        param.variogram: vector           - including the sill (var) and the range (scale) of
 ##                                            the variogram; default: var = 1, scale = 5
 ##        aniso.param:     vector           - parameters of the geometric anisotropy if the
@@ -21,6 +21,8 @@
 ##                                            distribution; default: NULL
 ##        mixture:         logical          - whether the outlier should be genereted as mixture 
 ##                                            model or as additive outliers; default: TRUE -> mixture
+##        nugget:          numeric          - if not NULL, value of the nugget effekt of the semivariogram;
+##                                            default: NULL
 ##        n.it:            numeric          - number of iterations; default: 1000
 ## Output: res: list - first element a matrix: in each column is one data set 
 ##                   - second element: a matrix with the coordinates
@@ -28,39 +30,52 @@
 
 sim.data <- function(gridsize = c("nx" = 15, "ny" = 15),
                      dist.outlier = rnorm, 
-                     variogram = RMspheric, 
+                     variogram = "spherical", 
                      param.variogram = c("var" = 1, "scale" = 5),
                      aniso.param = NULL, 
                      out.type = NULL, 
                      amount = NULL,
                      param.outlier = NULL, 
                      mixture = TRUE, 
+                     nugget = NULL,
                      n.it = 1000){
   
   # needed for simulation
-  library(RandomFields)
+  library(geoR)
   
   # simulate data without outliers
   if(is.null(aniso.param)){ # isotropy
-    data <- RFsimulate(dist(variogram(var = param.variogram["var"], scale = param.variogram["scale"])), 
-                       x = 1:gridsize["nx"], y = 1:gridsize["ny"],
-                       n = n.it)
-  }else{ # anisotropy
-    data <- RFsimulate(dist(variogram(var = param.variogram["var"], scale = param.variogram["scale"],
-                            Aniso = RMangle(angle = aniso.param["angle"], ratio = aniso.param["ratio"]))), 
-                       x = 1:gridsize["nx"], y = 1:gridsize["ny"],
-                       n = n.it)
+    if(is.null(nugget)){ # without nugget effect
+      data <- grf(grid = expand.grid(1:gridsize["nx"], 1:gridsize["ny"]),
+                  cov.model = variogram, cov.pars = param.variogram, 
+                  message = FALSE, nsim = n.it)
+    } else{ # nugget effect
+      data <- grf(grid = expand.grid(1:gridsize["nx"], 1:gridsize["ny"]),
+                  cov.model = variogram, cov.pars = param.variogram, nugget = nugget,
+                  message = FALSE, nsim = n.it)
+    }
+  } else{ # anisotropy
+    if(is.null(nugget)){ # without nugget effect
+      data <- grf(grid = expand.grid(1:gridsize["nx"], 1:gridsize["ny"]),
+                  cov.model = variogram, cov.pars = param.variogram, aniso.pars = aniso.param,
+                  message = FALSE, nsim = n.it)
+    } else{ # nugget effect
+      data <- grf(grid = expand.grid(1:gridsize["nx"], 1:gridsize["ny"]),
+                  cov.model = variogram, cov.pars = param.variogram, nugget = nugget, aniso.pars = aniso.param,
+                  message = FALSE, nsim = n.it)
+    }
   }
-  grid.coord <- coordinates(data) # save the grid of the data
-  data <- data@data # save the simulated data 
-
+  
+  grid.coord <- expand.grid(1:gridsize["nx"], 1:gridsize["ny"]) # save the grid of the data
+  data <- data$data # save the simulated data (for each iteration one column)
+  
   # if desired include outliers
   if(!is.null(out.type)){
     for(n in 1:n.it){ # for each iteration 
       
       # generate the coordinates of the outliers
-      coords.outlier <- gen.coords(type = out.type, amount = amount, gridsize = gridsize, blocktype = blocktype)
-      row.out <- apply(coords.outlier, 1, function(i) which(i[1] == grid.coord[,1] & i[2] == grid.coord[,2]))
+      coords.outlier <- gen.coords(type = out.type, amount = amount, gridsize = gridsize)
+      row.out <- apply(coords.outlier, 1, function(i) which(as.numeric(i[1]) == grid.coord[,1] & as.numeric(i[2]) == grid.coord[,2]))
       
       # simulate the values of the outliers 
       if(length(param.outlier) == 2){

@@ -25,9 +25,9 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73",  "#D55E00", "#CC79A7",  "#0072B
 ############
 ## Figure 1: True Variogram
 
-sp.var <- function(h, a = 5, c = 1){
-  if(h < a){res <- c*(((3*h)/(2*a)) - (1/2) * (h/a)^3)}
-  if(h >= a){res <- c}
+sp.var <- function(h, a = 5, c = 0.4, n = 0.1){
+  if(h < a){res <- n + c*(((3*h)/(2*a)) - (1/2) * (h/a)^3)}
+  if(h >= a){res <- n + c}
   if(h == 0){res <- 0}
   return(res)
 }
@@ -41,56 +41,64 @@ R <- matrix(c(cos(3*pi/8), -sin(3*pi/8), sin(3*pi/8), cos(3*pi/8)), nrow = 2)
 lag.vec.SN <- cbind(rep(0, 15), 1:15)
 lag.SN <- apply(lag.vec.SN, 1, function(x) sqrt(t(x)  %*% x))
 lags.SN <- apply(lag.vec.SN, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
+lags.SN <- c(0.00001, lags.SN)
     
 # E-W
 lag.vec.EW <- cbind(1:15, rep(0, 15))
 lag.EW <- apply(lag.vec.EW, 1, function(x) sqrt(t(x)  %*% x))
 lags.EW <- apply(lag.vec.EW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
+lags.EW <- c(0.00001, lags.EW)
 
 # SW-NE
 lag.vec.SWNE <- cbind(1:15, 1:15)
 lag.SWNE <- apply(lag.vec.SWNE, 1, function(x) sqrt(t(x)  %*% x))
 lags.SWNE <- apply(lag.vec.SWNE, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-    
+lags.SWNE <- c(0.00001, lags.SWNE)  
+
 # SE-NW
 lag.vec.SENW <- cbind(1:15, -(1:15))
 lag.SENW <- apply(lag.vec.SENW, 1, function(x) sqrt(t(x)  %*% x))
 lags.SENW <- apply(lag.vec.SENW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
+lags.SENW <- c(0.00001, lags.SENW)
   
 # true model
 true.var <- list()
-true.var[[1]] <- sapply(lags.SN, function(l) 2*sp.var(l, a = 5, c = 1))
-true.var[[2]] <- sapply(lags.EW, function(l) 2*sp.var(l, a = 5, c = 1))
-true.var[[3]] <- sapply(lags.SWNE, function(l) 2*sp.var(l, a = 5, c = 1))
-true.var[[4]] <- sapply(lags.SENW, function(l) 2*sp.var(l, a = 5, c = 1))
+true.var[[1]] <- sapply(lags.SN, function(l) 2*sp.var(l, a = 5, c = 0.4, n = 0.1))
+true.var[[2]] <- sapply(lags.EW, function(l) 2*sp.var(l, a = 5, c = 0.4, n = 0.1))
+true.var[[3]] <- sapply(lags.SWNE, function(l) 2*sp.var(l, a = 5, c = 0.4, n = 0.1))
+true.var[[4]] <- sapply(lags.SENW, function(l) 2*sp.var(l, a = 5, c = 0.4, n = 0.1))
 
 
-true.long <- data.frame("h" = c(lag.SN, lag.EW, lag.SWNE, lag.SENW), 
+true.long <- data.frame("h" = c(0.00001, lag.SN, 0.00001, lag.EW, 0.00001, lag.SWNE, 0.00001, lag.SENW), 
                         "vario" = c(true.var[[1]], true.var[[2]], true.var[[3]], true.var[[4]]),
-                        "direction" = c(rep("S-N", 15), rep("E-W", 15), rep("SW-NE", 15), rep("SE-NW",15)))
+                        "direction" = c(rep("S-N", 16), rep("E-W", 16), rep("SW-NE", 16), rep("SE-NW",16)))
 
 plot.sph <- ggplot(true.long, aes(x = h, y = vario, col = direction, shape = direction)) + geom_line(linewidth = 0.25) + geom_point(size= 2) +
   xlab("||h||") + ylab(expression(2 * gamma(h))) + scale_colour_manual(values=cbbPalette) +
-  theme_minimal(base_size = 18) + xlim(c(0,12))
+  theme_minimal(base_size = 18) + xlim(c(0,12)) + ylim(c(0,1))
 plot.sph
-ggsave("Graphs/sph_var_true.pdf")
+ggsave("Graphs/sph_var_true.pdf", width = 16.5, units = "cm")
 
 #########################
 ## 4.1: Correctionfactors
 #########################
 
 ###########
-## Table 1: 15 X 15 grid, all directions, all estimators
+## Table 1: all directions, all estimators
 load(file = "Correctionfactors/correctionfactors.RData")
 
+# 15x15 Grid
 xtable(round(res.corr[,,1, 1], 3))
 
+# 60x60 Grid
+xtable(round(res.corr[,,4, 1], 3))
+
 ####################################
-## 4.3: Non-contaminated normal data
+## 4.2: Non-contaminated normal data
 ####################################
 
 ############
-## Figure 2: Bias, all estimators, all directions, 15 x 15 grid
+## Figure 2: Bias, all estimators, all directions, 15x15 grid
 load("Consistency/estimation_bias.RData")
 
 # 15 x 15 grid
@@ -129,27 +137,27 @@ for(s in 1:6){
 E_W <- filter(bias.long, direction == "E-W")
 Bias_E_W <- ggplot(data = E_W, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +  geom_line(linewidth = 0.25) + 
   geom_point(size= 2) + ylab("Bias") + xlab("||h||") + scale_colour_manual(values=cbbPalette) +
-        scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.6, 0.15)
+        scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.25, 0.05)
 Bias_E_W
 
 
 S_N <- filter(bias.long, direction == "S-N")
 Bias_S_N <- ggplot(data = S_N, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +  geom_line(linewidth = 0.25) + 
   geom_point(size= 2) + ylab("Bias") + xlab("||h||")  + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.6, 0.15)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.25, 0.05)
 Bias_S_N
 
 SW_NE<- filter(bias.long, direction == "SW-NE")
 Bias_SW_NE <- ggplot(data = SW_NE, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +  geom_line(linewidth = 0.25) +  
   geom_point(size= 2) + ylab("Bias") + xlab("||h||")  + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.6, 0.15)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.25, 0.05)
 Bias_SW_NE
 
 
 SE_NW<- filter(bias.long, direction == "SE-NW")
 Bias_SE_NW <- ggplot(data = SE_NW, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +  geom_line(linewidth = 0.25) +  
   geom_point(size= 2) + ylab("Bias") + xlab("||h||")  + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.6, 0.15)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.25, 0.05)
 Bias_SE_NW
 
 
@@ -198,7 +206,7 @@ E_W <- filter(sqrtMSE.long, direction == "E-W")
 sqrtMSE_E_W <- ggplot(data = E_W, mapping = aes(x = lag, y = sqrtMSE, col = estimator, shape = estimator)) + 
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(sqrt("MSE"))) +
   xlab("||h||") + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 1.3)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 0.6)
 sqrtMSE_E_W
 
 
@@ -206,21 +214,21 @@ S_N <- filter(sqrtMSE.long, direction == "S-N")
 sqrtMSE_S_N <- ggplot(data = S_N, mapping = aes(x = lag, y = sqrtMSE, col = estimator, shape = estimator)) + 
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(sqrt("MSE"))) +
   xlab("||h||") + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 1.3)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 0.6)
 sqrtMSE_S_N
 
 SE_NW <- filter(sqrtMSE.long, direction == "SE-NW")
 sqrtMSE_SE_NW <- ggplot(data = SE_NW, mapping = aes(x = lag, y = sqrtMSE, col = estimator, shape = estimator), shape = estimator) + 
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(sqrt("MSE"))) +
   xlab("||h||") + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 1.3)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 0.6)
 sqrtMSE_SE_NW
 
 SW_NE <- filter(sqrtMSE.long, direction == "SW-NE")
 sqrtMSE_SW_NE <- ggplot(data = SW_NE, mapping = aes(x = lag, y = sqrtMSE, col = estimator, shape = estimator)) + 
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(sqrt("MSE"))) +
   xlab("||h||") + scale_colour_manual(values=cbbPalette) +
-  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 1.3)
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(0, 0.6)
 sqrtMSE_SW_NE
 
 
@@ -237,7 +245,7 @@ ggsave("Graphs/MSE_oA.pdf", width = 16.5, units = "cm")
 load(file = "Modified/estimation_errors.RData")
 
 
-errors <- kons.est.error[,,c(1,4,7),,]
+errors <- kons.est.error[,,c(1,4,7),,-c(1,4)]
 
 
 # prepare data for ggplot (for Figure 4 and Figure 5)
@@ -248,7 +256,7 @@ it <- 1:1000
 
 lags <- c(1, 4, 7)
 
-grid <- c("15x15", "25x25", "50x50", "75x75")
+grid <- c("25x25", "50x50", "75x75")
 
 dic <- c("S-N", "E-W")
 
@@ -256,7 +264,7 @@ errors_long <- data.frame(estimator = NA, iteration = NA, lag = NA, direction = 
 for(s in 1:10){
   for(r in 1:2){
     for(l in 1:3){
-      for(g in 1:4){  
+      for(g in 1:3){  
         errors_long <- rbind(errors_long, data.frame(estimator = est[s], iteration = it, direction = dic[r], lag = lags[l], grid = grid[g], error = errors[s, r, l,, g]))
       }
     }
@@ -300,12 +308,36 @@ ggsave("Graphs/Boxplot_SN.pdf", width = 22, height = 10, units = "cm")
 ## 4.4: Contamination with block outliers
 #########################################
 
+###########
+## Table 2: Bias & rMSE multiplied with 10, 3 lags, 2 distributions, 2 amounts, direction E-W & S-N
+##          GRF with outlier block
+
+load("Block/estimation_bias.RData")
+load("Block/estimation_sqrtMSE.RData")
+
+# 15 x 15 grid, N(3,1) & N(0,4),  5% and 15%, S-N  & E-W, lags c(1,4,7)
+bias <- kons.bias[,1:2,c(1,4,7),c(1,3),c(2,4), 1]
+rMSE <- kons.sqrtMSE[,1:2,c(1,4,7),c(1,3),c(2,4), 1]
+
+bias <- round(bias * 10, 2)
+rMSE <- round(rMSE * 10, 2)
+
+# modified estimators
+load("Modified/estimation_bias_block.RData")
+load("Modified/estimation_sqrtMSE_block.RData")
+
+bias <- kons.bias[,,c(1,4,7),,]
+rMSE <- kons.sqrtMSE[,,c(1,4,7),,]
+
+bias <- round(bias * 10, 2)
+rMSE <- round(rMSE * 10, 2)
+
 ############
 ## Figure 6: Bias for E-W, S-N, 5% und 15%, 25%, N(3,1) 
 load("Block/estimation_bias.RData")
 
 # 15 x 15 grid, N(3,1),  5% und 15%
-bias <- kons.bias[,1:2,,c(1,3, 4),2]
+bias <- kons.bias[,1:2,,c(1,3, 4),2, 1]
 
 # prepare data for ggplot
 lag.vec.1 <- cbind(1:7, rep(0, 7))
@@ -387,7 +419,7 @@ ggsave("Graphs/Bias_BA.pdf", width = 16.5, height = 16.5, units = "cm")
 load("Block/estimation_bias.RData")
 
 # 15 x 15 grid, N(3, 1), N(5,1), N(0,4), 10%
-bias <- kons.bias[,3:4,,2,c(2, 3, 4)]
+bias <- kons.bias[,3:4,,2,c(2, 3, 4), 1]
 
 # prepare data for ggplot
 lag.vec.1 <- cbind(1:5, 1:5)
@@ -469,7 +501,7 @@ ggsave("Graphs/Bias_BA_2.pdf", width = 16.5, height = 16.5, units = "cm")
 load("Isolated/estimation_bias.RData")
 
 # 15 x 15 grid, N(3, 1), N(5,1), 5%, 15%, 25%, E-W
-bias <- kons.bias[,2,,c(1, 3, 4),c(2, 3)]
+bias <- kons.bias[,2,,c(1, 3, 4),c(2, 3), 1]
 
 # prepare data for ggplot
 lag.vec.1 <- cbind(1:7, rep(0,7))
@@ -557,27 +589,90 @@ load(file = "Correctionfactors/correctionfactors.RData")
 xtable(round(res.corr[,,1, 2], 3))
 xtable(round(res.corr[,,1, 3], 3))
 
-###########
-## Table 2: Bias & rMSE multiplied with 10, 3 lags, 2 distributions, 2 amounts, direction E-W & S-N
-##          GRF with outlier block
+############
+## Figure 1: 60 X60 grid, with and without block outliers
 
-load("Block/estimation_bias.RData")
-load("Block/estimation_sqrtMSE.RData")
+# without outliers
+load(file = "Consistency/estimation_bias.Rdata")
+bias.oA <- kons.bias[,2,,4]
 
-# 15 x 15 grid, N(3,1) & N(0,4),  5% and 15%, S-N  & E-W, lags c(1,4,7)
-bias <- kons.bias[,1:2,c(1,4,7),c(1,3),c(2,4)]
-rMSE <- kons.sqrtMSE[,1:2,c(1,4,7),c(1,3),c(2,4)]
+# prepare data for ggplot
+lag.vec.1 <- cbind(1:7, rep(0, 7))
+lags.1 <- apply(lag.vec.1, 1, function(x) sqrt(t(x)%*% x))
+lags.1 <- c(lags.1, NA, NA)
 
-bias <- round(bias * 10, 2)
-rMSE <- round(rMSE * 10, 2)
 
-# modified estimators
-load("Modified/estimation_bias_block.RData")
-load("Modified/estimation_sqrtMSE_block.RData")
+est <- c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re", "Matheron", "Genton")
 
-bias <- kons.bias[,,c(1,4,7),,]
-rMSE <- kons.sqrtMSE[,,c(1,4,7),,]
+dic <- "E-W"
 
-bias <- round(bias * 10, 2)
-rMSE <- round(rMSE * 10, 2)
+bias.long.oA <- data.frame(estimator = NA, direction = NA, lag = NA, bias = NA)
+for(s in 1:6){
+    for(l in 1:7){
+        lags <- lags.1
+      bias.long.oA <- rbind(bias.long.oA, data.frame(estimator = est[s], direction = dic, lag = lags[l], bias = bias.oA[s, l]))
+    }
+}
 
+EW_oA <- filter(bias.long.oA, direction == "E-W")
+Bias_oA_E_W <- ggplot(data = EW_oA, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +  geom_line(linewidth = 0.25) + 
+  geom_point(size= 2) + ylab("Bias") + xlab("||h||") + scale_colour_manual(values=cbbPalette) +
+  scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) + theme_minimal(base_size = 10) + ylim(-0.15, 0.05)
+Bias_oA_E_W
+
+
+# with block outliers
+load(file = "Block/estimation_bias.RData")
+bias.BA <- kons.bias[,2,,2:4,3:4,2]
+
+
+# prepare data for ggplot
+lag.vec.1 <- cbind(1:7, rep(0, 7))
+lags.1 <- apply(lag.vec.1, 1, function(x) sqrt(t(x)%*% x))
+lags.1 <- c(lags.1, NA, NA)
+
+
+est <- c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re", "Matheron", "Genton")
+
+dic <- "E-W"
+
+dis <- c("N(5,1)", "N(0,4)")
+
+am <- c(0.1, 0.15, 0.25)
+
+bias.long.BA <- data.frame(estimator = NA, direction = NA, lag = NA, dist = NA, amount = NA, bias = NA)
+for(s in 1:6){
+  for(l in 1:5){
+    for(d in 1:2){
+      for(a in 1:3){
+        lags <- lags.1
+        
+        bias.long.BA <- rbind(bias.long.BA, data.frame(estimator = est[s], direction = dic, lag = lags[l], dist = dis[d], amount = am[a], bias = bias.BA[s, l, a, d]))
+      }
+    }
+  }
+}
+
+EW_BA_10_d4 <- filter(bias.long.BA, dist == "N(0,4)", amount == 0.1)
+Bias_EW_BA_d4_0.1 <- ggplot(data = EW_BA_10_d4, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +
+  geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab("Bias") + xlab("||h||") +
+  scale_colour_manual(values=cbbPalette) + scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) +
+  theme_minimal(base_size = 10)
+Bias_EW_BA_d4_0.1
+
+EW_BA_25_d4 <- filter(bias.long.BA, dist == "N(0,4)", amount == 0.25)
+Bias_EW_BA_d4_0.25 <- ggplot(data = EW_BA_25_d4, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +
+  geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab("Bias") + xlab("||h||") +
+  scale_colour_manual(values=cbbPalette) + scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) +
+  theme_minimal(base_size = 10)
+Bias_EW_BA_d4_0.25
+
+EW_BA_10_d3 <- filter(bias.long.BA, dist == "N(5,1)", amount == 0.1)
+Bias_EW_BA_d3_0.1 <- ggplot(data = EW_BA_10_d3, mapping = aes(x = lag, y = bias, col = estimator, shape = estimator)) +
+  geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab("Bias") + xlab("||h||") +
+  scale_colour_manual(values=cbbPalette) + scale_shape_manual(values = c(3, 4, 19, 17, 15, 8)) +
+  theme_minimal(base_size = 10)
+Bias_EW_BA_d3_0.1
+
+(Bias_oA_E_W| Bias_EW_BA_d4_0.25)/(Bias_EW_BA_d3_0.1|Bias_EW_BA_d4_0.1) + plot_layout(guides = "collect") & plot_annotation(tag_levels = "a")& theme(legend.position = 'bottom')
+ggsave("Graphs/Bias_60.pdf", width = 16.5, height = 16.5, units = "cm")

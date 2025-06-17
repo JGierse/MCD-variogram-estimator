@@ -6,10 +6,10 @@
 ## Load functions and packages
 ##############################
 
-library(RandomFields) 
+library(geoR) 
 library(readxl) # to read excel files  
-source("/Functions/functions-data-simulation.R") 
-source("/Parameters.R")
+source("Functions/functions-data-simulation.R") 
+source("Parameters.R")
 
 
 ########################################################
@@ -30,12 +30,12 @@ for(ind in 1:nrow(combs.corr)){
   set.seed(s)
   seeds[ind] <- s
   data <- sim.data(gridsize = grids[combs.corr$gridsize[ind],],
-                   dist = dists,
                    dist.outlier = dists.outlier,
                    variogram = variograms[combs.corr$variogram[[ind]]][[1]],
                    param.variogram = params.variogram[combs.corr$param.variogram[ind],],
-                   aniso.param = aniso.params[combs.corr$aniso[[ind]]],
-                   param.outlier = param.outliers[combs.corr$param.outlier[[ind]]])
+                   aniso.param = aniso.params,
+                   param.outlier = param.outliers[combs.corr$param.outlier[[ind]]],
+                   nugget = nugget)
   save(data, file = paste0("Data/Correctionfactors/data_grid", 
                     combs.corr$gridsize[ind], "_vario",
                     combs.corr$variogram[ind], "_aniso", 
@@ -56,12 +56,12 @@ for(ind in 1:nrow(combs.kons)){
   set.seed(s)
   seeds[ind] <- s
   data <- sim.data(gridsize = grids[combs.kons$gridsize[ind],],
-                   dist = dists,
                    dist.outlier = dists.outlier,
                    variogram = variograms[combs.kons$variogram[[ind]]][[1]],
                    param.variogram = params.variogram[combs.kons$param.variogram[ind],],
-                   aniso.param = aniso.params[combs.kons$aniso[[ind]]],
-                   param.outlier = param.outliers[combs.kons$param.outlier[[ind]]])
+                   aniso.param = aniso.params,
+                   param.outlier = param.outliers[combs.kons$param.outlier[[ind]]],
+                   nugget = nugget)
   save(data, file = paste0("Data/Consistency/data_grid", 
                            combs.kons$gridsize[ind], "_vario",
                            combs.kons$variogram[ind], "_aniso", 
@@ -81,14 +81,14 @@ for(ind in 1:nrow(combs.iso)){
   set.seed(s)
   seeds[ind] <- s
   data <- sim.data(gridsize = grids[combs.iso$gridsize[ind],],
-                   dist = dists,
                    dist.outlier = dists.outlier,
                    variogram = variograms[combs.iso$variogram[[ind]]][[1]],
                    param.variogram = params.variogram[combs.iso$param.variogram[ind],],
-                   aniso.param = aniso.params[combs.iso$aniso[[ind]]],
+                   aniso.param = aniso.params,
                    out.type = outlier.types[combs.iso$type[ind]],
                    amount = outlier.amount[combs.iso$amount[ind]],
-                   param.outlier = unlist(param.outliers[combs.iso$param.outlier[[ind]]]))
+                   param.outlier = unlist(param.outliers[combs.iso$param.outlier[[ind]]]),
+                   nugget = nugget)
   save(data, file = paste0("Data/Isolated/data_grid", 
                            combs.iso$gridsize[ind], "_vario",
                            combs.iso$variogram[ind], "_aniso", 
@@ -98,7 +98,6 @@ for(ind in 1:nrow(combs.iso)){
                            combs.iso$param.outlier[[ind]], ".RData"))
 }
 save(seeds, file = "Data/Isolated/seeds.RData")
-
 
 ##############################################################
 ## Gaussian random fiels: for simulation with an outlier block
@@ -111,15 +110,14 @@ for(ind in 1:nrow(combs.block)){
   set.seed(s)
   seeds[ind] <- s
   data <- sim.data(gridsize = grids[combs.block$gridsize[ind],],
-                   dist = dists,
                    dist.outlier = dists.outlier,
                    variogram = variograms[combs.block$variogram[[ind]]][[1]],
                    param.variogram = params.variogram[combs.block$param.variogram[ind],],
-                   aniso.param = aniso.params[combs.block$aniso[[ind]]],
+                   aniso.param = aniso.params,
                    out.type = outlier.types[combs.block$type[ind]],
                    amount = outlier.amount[combs.block$amount[ind]],
-                   param.outlier = unlist(param.outliers[combs.block$param.outlier[[ind]]]),
-                   blocktype = "quad")
+                   param.outlier = unlist(param.outliers[combs.block$param.outlier[[ind]]],),
+                   nugget = nugget)
   save(data, file = paste0("Data/Block/data_grid", 
                            combs.block$gridsize[ind], "_vario",
                            combs.block$variogram[ind], "_aniso", 
@@ -129,5 +127,3 @@ for(ind in 1:nrow(combs.block)){
                            combs.block$param.outlier[[ind]], ".RData"))
 }
 save(seeds, file = "Data/Block/seeds.RData")
-
-

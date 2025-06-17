@@ -82,7 +82,7 @@ sim.it <- function(data,
   
   # build the differences needed for the Matheron and Genton variogram estimator;
   # Output: S-N, E-W, SW-NE, SE-NW
-  mat.gen <- build.mat(data, grid, hmax)
+  #mat.gen <- build.mat(data, grid, hmax)
   
   # calculate the variogram estimations based on the different estimators for 
   # all four directions
@@ -90,8 +90,8 @@ sim.it <- function(data,
   diff.re <- sapply(1:4, function(x)  MCD.diff(vec.diff[[x]], reweighting = TRUE, missing = missing, det = det))
   org <- sapply(1:4, function(x) MCD.org(vec.org[[x]], reweighting = FALSE, missing = missing, det = det))
   org.re <- sapply(1:4, function(x) MCD.org(vec.org[[x]], reweighting = TRUE, missing = missing, det = det))
-  Math <- Matheron(mat.gen) 
-  Gen <- Genton(mat.gen)
+  #Math <- Matheron(mat.gen) 
+  #Gen <- Genton(mat.gen)
   
   # if mod = TRUE; calculate also the variogram estimations based on the modified
   # MCD variogram estimators; these will be only calculated for the directions:
@@ -145,13 +145,13 @@ sim.it <- function(data,
 
   # save the results
   resS.N <- cbind("MCD.diff" = diff[[1]], "MCD.diff.re" = diff.re[[1]], "MCD.org" = org[[1]],
-                  "MCD.org.re" = org.re[[1]], "Matheron" = Math[[1]], "Genton" = Gen[[1]])
+                  "MCD.org.re" = org.re[[1]])#, "Matheron" = Math[[1]], "Genton" = Gen[[1]])
   resE.W <- cbind("MCD.diff" = diff[[2]], "MCD.diff.re" = diff.re[[2]], "MCD.org" = org[[2]],
-                  "MCD.org.re" = org.re[[2]], "Matheron" = Math[[2]], "Genton" = Gen[[2]])
+                  "MCD.org.re" = org.re[[2]])#, "Matheron" = Math[[2]], "Genton" = Gen[[2]])
   resSW.NE <- cbind("MCD.diff" = diff[[3]], "MCD.diff.re" = diff.re[[3]], "MCD.org" = org[[3]],
-                  "MCD.org.re" = org.re[[3]], "Matheron" = Math[[3]], "Genton" = Gen[[3]])
+                  "MCD.org.re" = org.re[[3]])#, "Matheron" = Math[[3]], "Genton" = Gen[[3]])
   resSE.NW <- cbind("MCD.diff" = diff[[4]], "MCD.diff.re" = diff.re[[4]], "MCD.org" = org[[4]],
-                  "MCD.org.re" = org.re[[4]], "Matheron" = Math[[4]], "Genton" = Gen[[4]])
+                  "MCD.org.re" = org.re[[4]])#, "Matheron" = Math[[4]], "Genton" = Gen[[4]])
   
   if(mod){
     resS.N <- cbind(resS.N, "MCD.diff.mod" = diff.mod[[1]], "MCD.diff.mod.re" = diff.mod.re[[1]], "MCD.org.mod" = org.mod[[1]],

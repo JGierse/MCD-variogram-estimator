@@ -2,27 +2,25 @@
 ## Parameter values for the simulations presented in the paper                ##
 ################################################################################
 
-library(RandomFields)
-
-
 ## grid sizes
 grids <- rbind(c("nx" = 15, "ny" = 15),
                c("nx" = 25, "ny" = 25),
                c("nx" = 50, "ny" = 50),
+               c("nx" = 60, "ny" = 60),
                c("nx" = 75, "ny" = 75))
-
-## distribution of the random field
-dists <- RPGauss
 
 ## distribution of the outliers
 dists.outlier <- rnorm
 
 ## variogram models
-variograms <- list(RMspheric, RMexp, RMgauss)
+variograms <- list("spherical", "exponential", "gaussian")
 
 ## parameters of the variogram models
-params.variogram <- rbind(c("var" = 1, "scale" = 5),
-                          c("var" = 1, "scale" = 3))
+params.variogram <- rbind(c("var" = 0.4, "scale" = 5),
+                          c("var" = 0.4, "scale" = 3))
+
+## nugget effects
+nugget <- c(0.1)
 
 ## Parameters for the anisotropy
 aniso.params <- c("angle" = 3*pi/8, "ratio" = 2)

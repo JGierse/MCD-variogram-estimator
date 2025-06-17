@@ -6,7 +6,7 @@
 ## Load functions and packages
 ##############################
 
-library(RandomFields) 
+library(geoR) 
 library(future) # for parallelisation 
 library(future.apply) # for parallelisation  
 library(readxl) # to read excel files 
@@ -40,7 +40,7 @@ load(file = paste0("Data/Correctionfactors/data_grid",
 
 plan(multicore) # need for the HPC cluster
 res <- future_lapply(1:1000, function(i){
-  sim.it(data$data[[i]], data$grid, hmaxs, cp = 1)
+  sim.it(data$data[,i], expand.grid(1:grids[combs.corr$gridsize[ind],"nx"], 1:grids[combs.corr$gridsize[ind],"ny"]), hmaxs, cp = 1)
 }, future.seed = TRUE)
 save(res, file = paste0("Correctionfactors/res_corr_grid", 
                         combs.corr$gridsize[ind], "_vario",
@@ -56,11 +56,11 @@ rm(res)
 #############
 
 # to save the results
-res.corr <- array( dim = c(6, 4, 4, 3),
+res.corr <- array( dim = c(6, 4, 5, 3),
                    dimnames = list(estimator = c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re",
                                                 "Matheron", "Genton"),
                                    direction = c("S-N", "E-W", "SW-NE",  "SE-NW"),
-                                   grid = c("15,15", "25,25", "50,50", "75,75"),
+                                   grid = c("15,15", "25,25", "50,50", "60, 60", "75,75"),
                                    variogram = c("sph", "exp", "gauss")))
 
 for(ind in 1:nrow(combs.corr)){ # for each szenario
@@ -105,10 +105,10 @@ for(ind in 1:nrow(combs.corr)){ # for each szenario
     return(res)
   }
   true.sph <- list()
-  true.sph[[1]] <- sapply(lags.SN, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[2]] <- sapply(lags.EW, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*sp.var(l, a = 5, c = 1))
+  true.sph[[1]] <- sapply(lags.SN, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[2]] <- sapply(lags.EW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
   
   # combs.corr$variogram = 2: exponential
   exp.var <- function(h, a, c){
@@ -116,10 +116,10 @@ for(ind in 1:nrow(combs.corr)){ # for each szenario
     return(res)
   }
   true.exp <- list()
-  true.exp[[1]] <- sapply(lags.SN, function(l) 2*exp.var(l, a = 3, c = 1))
-  true.exp[[2]] <- sapply(lags.EW, function(l) 2*exp.var(l, a = 3, c = 1))
-  true.exp[[3]] <- sapply(lags.SWNE, function(l) 2*exp.var(l, a = 3, c = 1))
-  true.exp[[4]] <- sapply(lags.SENW, function(l) 2*exp.var(l, a = 3, c = 1))
+  true.exp[[1]] <- sapply(lags.SN, function(l) 2*(nugget + exp.var(l, a = 3, c = 0.4)))
+  true.exp[[2]] <- sapply(lags.EW, function(l) 2*(nugget + exp.var(l, a = 3, c = 0.4)))
+  true.exp[[3]] <- sapply(lags.SWNE, function(l) 2*(nugget + exp.var(l, a = 3, c = 0.4)))
+  true.exp[[4]] <- sapply(lags.SENW, function(l) 2*(nugget + exp.var(l, a = 3, c = 0.4)))
   
   # combs.corr$variogram = 3: gauss
   gauss.var <- function(h, a, c){
@@ -127,10 +127,10 @@ for(ind in 1:nrow(combs.corr)){ # for each szenario
     return(res)
   }
   true.gauss <- list()
-  true.gauss[[1]] <- sapply(lags.SN, function(l) 2*gauss.var(l, a = 3, c = 1))
-  true.gauss[[2]] <- sapply(lags.EW, function(l) 2*gauss.var(l, a = 3, c = 1))
-  true.gauss[[3]] <- sapply(lags.SWNE, function(l) 2*gauss.var(l, a = 3, c = 1))
-  true.gauss[[4]] <- sapply(lags.SENW, function(l) 2*gauss.var(l, a = 3, c = 1))
+  true.gauss[[1]] <- sapply(lags.SN, function(l) 2*(nugget + gauss.var(l, a = 3, c = 0.4)))
+  true.gauss[[2]] <- sapply(lags.EW, function(l) 2*(nugget + gauss.var(l, a = 3, c = 0.4)))
+  true.gauss[[3]] <- sapply(lags.SWNE, function(l) 2*(nugget + gauss.var(l, a = 3, c = 0.4)))
+  true.gauss[[4]] <- sapply(lags.SENW, function(l) 2*(nugget + gauss.var(l, a = 3, c = 0.4)))
 
   # save the different true variograms
   true.var <- list(true.sph, true.exp, true.gauss)

@@ -45,7 +45,7 @@ library(patchwork)
 # SRS: "EPSG:3857"
 # Temporal aggregation method: "first"
 # Spatial resampling method: "near"
-#IMAGE_DIR = "L8_cropped"  # Path of the data 
+# IMAGE_DIR = "C:/Users/jkoenig/sciebo2/L8_cropped"  # Path of the data 
 
 # load the structure of the data
 col <- create_image_collection(list.files(IMAGE_DIR, recursive = TRUE, pattern=".tif", full.names  = TRUE), "L8_SR")
@@ -220,13 +220,13 @@ cbbPalette1 <- c("#E69F00", "#56B4E9",  "#D55E00","#0072B2")
 S_N <- filter(varo.long, direction == "S-N")
 S_Ng <- ggplot(S_N, mapping = aes(x = lag, y = vario, col = estimator, shape = estimator, linetype = outlier)) +
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(2 * gamma(h))) + xlab("||h||") + scale_colour_manual(values=cbbPalette1) +
-  scale_shape_manual(values = c(3, 4, 17, 8)) + theme_minimal(base_size = 10)
+  scale_shape_manual(values = c(3, 4, 17, 8)) + theme_minimal(base_size = 10) + ylim(0,7)
 
 S_N2 <- filter(S_N, estimator != "Matheron" & outlier == "with")
 S_N2 <- rbind(S_N2, filter(S_N, outlier == "without"))
 S_N2g <- ggplot(S_N2, mapping = aes(x = lag, y = vario, col = estimator, shape = estimator, linetype = outlier)) +
   geom_line(linewidth = 0.25) + geom_point(size= 2) + ylab(expression(2 * gamma(h))) + xlab("||h||") + scale_colour_manual(values=cbbPalette1) +
-  scale_shape_manual(values = c(3, 4, 17, 8)) + theme_minimal(base_size = 10)
+  scale_shape_manual(values = c(3, 4, 17, 8)) + theme_minimal(base_size = 10) + ylim(0,2)
 (S_Ng | S_N2g) + plot_layout(guides = "collect") + plot_annotation(tag_levels = "a") & theme(legend.position = 'bottom')
 ggsave("Graphs/Anwendung_MCD_SN.pdf", width = 16.5, units = "cm") # Figure 10
 

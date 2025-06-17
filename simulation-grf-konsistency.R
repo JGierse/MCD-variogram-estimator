@@ -6,7 +6,7 @@
 ## Load functions and packages
 ##############################
 
-library(RandomFields) 
+library(geoR) 
 library(future) # for parallelisation  
 library(future.apply) # for parallelisation  
 library(readxl) # to read excel files 
@@ -40,7 +40,7 @@ load(file = paste0("Data/Consistency/data_grid",
 
 plan(multicore)  # need for the HPC cluster
 res <- future_lapply(1:1000, function(i){
-  sim.it(data$data[[i]], data$grid, hmaxs, cp = 1)
+  sim.it(data$data[,i], expand.grid(1:grids[combs.cons$gridsize[ind],"nx"], 1:grids[combs.cons$gridsize[ind],"ny"]), hmaxs, cp = 1)
 }, future.seed = TRUE)
 save(res, file = paste0("Consistency/res_cons_grid", 
                         combs.cons$gridsize[ind], "_vario",
@@ -58,15 +58,15 @@ save(res, file = paste0("Consistency/res_cons_grid",
 load(file = "Correctionfactors/correctionfactors.RData")
 
 
-# to save the estimation errors; needed for boxplot in 4.3 and calculation of 
-# bias and sqrtMSE 
-kons.est.error <- array(dim = c(6, 4, 7, 1000,  4),
+# to save the estimation errors; needed for boxplot in 4.3 and calculation of
+# bias and sqrtMSE
+kons.est.error <- array(dim = c(6, 4, 7, 1000,  5),
                         dimnames = list(estimator = c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re",
                                                      "Matheron", "Genton"),
                                         direction = c("S-N", "E-W", "SW-NE", "SE-NW"),
                                         lag = c("l1", "l2", "l3", "l4", "l5", "l6", "l7"),
                                         iteration = 1:1000,
-                                        grid = c("15,15", "25,25", "50,50", "75,75")))
+                                        grid = c("15,15", "25,25", "50,50", "60,60", "75,75")))
 
 for(ind in 1:nrow(combs.cons)){ # for each scenario
   load(file= paste0("Consistency/res_cons_grid",
@@ -75,30 +75,30 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
                     combs.cons$aniso[[ind]], "_",
                     outlier.types[combs.cons$type[ind]], "_hmax",
                     combs.cons$hmax[[ind]], ".RData"))
-  
+
 
   ## Calculate the true variogram values in the four different directions
   # Geometric anisotropy: scaling and rotation (see section 4)
   Ts <- diag(c(1, 1/2)) # scaling
   R <- matrix(c(cos(3*pi/8), -sin(3*pi/8), sin(3*pi/8), cos(3*pi/8)), nrow = 2) # rotation
-  
+
   # lag vectors in S-N direction
   lag.vec.SN <- cbind(rep(0, hmaxs[1]), 1:hmaxs[1])
   lags.SN <- apply(lag.vec.SN, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in E-W direction
   lag.vec.EW <- cbind(1:hmaxs[2], rep(0, hmaxs[2]))
   lags.EW <- apply(lag.vec.EW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in SW-NE direction
   lag.vec.SWNE <- cbind(1:hmaxs[3], 1:hmaxs[3])
   lags.SWNE <- apply(lag.vec.SWNE, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in SE-NW direction
   lag.vec.SENW <- cbind(1:hmaxs[4], -(1:hmaxs[4]))
   lags.SENW <- apply(lag.vec.SENW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
-  # combs.corr$variogram = 1: spherical 
+
+  # combs.corr$variogram = 1: spherical
   sp.var <- function(h, a, c){ 
     if(h < a){res <- c*(((3*h)/(2*a)) - (1/2) * (h/a)^3)}
     if(h >= a){res <- c}
@@ -106,10 +106,10 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
     return(res)
   }
   true.sph <- list()
-  true.sph[[1]] <- sapply(lags.SN, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[2]] <- sapply(lags.EW, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*sp.var(l, a = 5, c = 1))
+  true.sph[[1]] <- sapply(lags.SN, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[2]] <- sapply(lags.EW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
   
   # multiplicate with the correction factors
   fac <- res.corr[,,combs.cons$gridsize[ind], combs.cons$variogram[ind]]
@@ -128,7 +128,7 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
       apply(res.c[[l]][[r]], 2, function(x) x - true.sph[[r]])
     })})
 
-  # in the SW-NE and SE-NW direction the number of lags is smaller than in 
+  # in the SW-NE and SE-NW direction the number of lags is smaller than in
   # the other two direction -> therefore fill up with NAs
   for(l in 1:1000){
     for(r in 1:4){
@@ -146,26 +146,26 @@ save(kons.est.error, file = "Consistency/estimation_errors.RData")
 
 
 ## Calculate bias, estimated mean and sqrtMSE
-kons.bias <- array( dim = c(6, 4, 7, 4),
+kons.bias <- array( dim = c(6, 4, 7, 5),
                     dimnames = list(estimator = c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re",
                                                  "Matheron", "Genton"),
                                     direction = c("S-N", "E-W", "SW-NE", "SE-NW"),
                                     lag = c("l1", "l2", "l3", "l4", "l5", "l6", "l7"),
-                                    grid = c("15,15", "25,25", "50,50", "75,75")))
+                                    grid = c("15,15", "25,25", "50,50", "60,60", "75,75")))
 
-kons.mean <- array( dim = c(6, 4, 7, 4),
+kons.mean <- array( dim = c(6, 4, 7, 5),
                     dimnames = list(estimator = c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re",
                                                  "Matheron", "Genton"),
                                     direction = c("S-N", "E-W", "SW-NE", "SE-NW"),
                                     lag = c("l1", "l2", "l3", "l4", "l5", "l6", "l7"),
-                                    grid = c("15,15", "25,25", "50,50", "75,75")))
+                                    grid = c("15,15", "25,25", "50,50", "60,60", "75,75")))
 
-kons.sqrtMSE <- array( dim = c(6, 4, 7, 4),
+kons.sqrtMSE <- array( dim = c(6, 4, 7, 5),
                        dimnames = list(estimator = c("MCD.diff", "MCD.diff.re", "MCD.org", "MCD.org.re",
                                                     "Matheron", "Genton"),
                                        direction = c("S-N", "E-W", "SW-NE", "SE-NW"),
                                        lag = c("l1", "l2", "l3", "l4", "l5", "l6", "l7"),
-                                       grid = c("15,15", "25,25", "50,50", "75,75")))
+                                       grid = c("15,15", "25,25", "50,50", "60,60", "75,75")))
 
 
 for(ind in 1:nrow(combs.cons)){ # for each scenario
@@ -184,20 +184,20 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
   # lag vectors in S-N direction
   lag.vec.SN <- cbind(rep(0, hmaxs[1]), 1:hmaxs[1])
   lags.SN <- apply(lag.vec.SN, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in E-W direction
   lag.vec.EW <- cbind(1:hmaxs[2], rep(0, hmaxs[2]))
   lags.EW <- apply(lag.vec.EW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in SW-NE direction
   lag.vec.SWNE <- cbind(1:hmaxs[3], 1:hmaxs[3])
   lags.SWNE <- apply(lag.vec.SWNE, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
+
   # lag vectors in SE-NW direction
   lag.vec.SENW <- cbind(1:hmaxs[4], -(1:hmaxs[4]))
   lags.SENW <- apply(lag.vec.SENW, 1, function(x) sqrt(t(x) %*% t(R) %*% t(Ts) %*% Ts %*% R %*% x))
-  
-  # combs.corr$variogram = 1: spherical 
+
+  # combs.corr$variogram = 1: spherical
   sp.var <- function(h, a, c){ 
     if(h < a){res <- c*(((3*h)/(2*a)) - (1/2) * (h/a)^3)}
     if(h >= a){res <- c}
@@ -205,11 +205,10 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
     return(res)
   }
   true.sph <- list()
-  true.sph[[1]] <- sapply(lags.SN, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[2]] <- sapply(lags.EW, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*sp.var(l, a = 5, c = 1))
-  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*sp.var(l, a = 5, c = 1))
-  
+  true.sph[[1]] <- sapply(lags.SN, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[2]] <- sapply(lags.EW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[3]] <- sapply(lags.SWNE, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
+  true.sph[[4]] <- sapply(lags.SENW, function(l) 2*(nugget + sp.var(l, a = 5, c = 0.4)))
 
   # multiplicate with the correction factors
   fac <- res.corr[,, combs.cons$gridsize[ind], combs.cons$variogram[ind]]
@@ -227,20 +226,20 @@ for(ind in 1:nrow(combs.cons)){ # for each scenario
       apply(res.c[[l]][[r]], 2, function(x) (x - true.sph[[r]])^2)
     })})
 
-  
+
   for(r in 1:4){ # for each direction
     total <- 0
     MSE <- 0
     for(l in 1:1000){
 
-      total <- total + res.c[[l]][[r]] # calculate the sum of the estimates 
+      total <- total + res.c[[l]][[r]] # calculate the sum of the estimates
       MSE <- MSE + sq.error[[l]][[r]]  # calculate the MSE
     }
     total <- total/1000
     MSE <- sqrt(MSE/1000)
     Bias <- total - true.sph[[r]] # calculate the bias
-    
-    # in the SW-NE and SE-NW direction the number of lags is smaller than in 
+
+    # in the SW-NE and SE-NW direction the number of lags is smaller than in
     # the other two direction -> therefore fill up with NAs
     if(nrow(est.error[[l]][[r]]) <= 7){
       d <- 7 - nrow(total)
